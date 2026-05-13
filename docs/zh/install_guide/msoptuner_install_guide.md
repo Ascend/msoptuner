@@ -16,22 +16,29 @@ git config --global credential.helper store
 
 ### 环境准备
 
-- Atlas A2 训练系列产品/Atlas A2 推理系列产品硬件环境
+Atlas A2 训练系列产品/Atlas A2 推理系列产品硬件环境
 
   开始构建之前，需要确保已安装bisheng编译器，并且其可执行文件所在路径在环境变量$PATH中（如果已安装cann算子工具包，可在工具包安装路径下执行source set_env.sh）。
 
   ```shell
-  source /path/to/Ascend/cann/set_env.sh
+  source /usr/local/Ascend/cann/set_env.sh
   ```
 
 ## 安装步骤
 
 ### 项目构建
 
-- 命令行方式
+- 克隆本仓库
+
+    ```sh
+    git clone https://gitcode.com/Ascend/msoptuner.git
+    ```
+
+- 命令行方式  
   执行如下命令下载项目构建依赖的子仓库，并更新依赖到最新代码：
 
   ```shell
+  cd msoptuner
   python download_dependencies.py
   ```
 
@@ -50,12 +57,12 @@ git config --global credential.helper store
     python build.py
     ```
 
-    > [!NOTE]  说明  
+    > [!NOTE]  
     > 如果本地更改了依赖子仓库中的代码，不想构建过程中执行更新动作，可以执行`python build.py local`。
 
 ### 测试
 
-- 命令行方式
+- 命令行方式  
     通过以下脚本下载UT构建依赖的子仓库，并更新依赖到最新代码：
 
     ```shell
@@ -72,7 +79,7 @@ git config --global credential.helper store
     python test_mstuner.py
     ```
 
-- 一键式脚本方式
+- 一键式脚本方式  
     调用一键式脚本完成UT构建依赖仓下载和UT测试流程：
 
     ```shell
