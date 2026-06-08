@@ -49,6 +49,7 @@ add_dependencies(mstuner_catlass
 )
 
 target_link_libraries(mstuner_catlass PRIVATE
+    stdc++
     stdc++fs
     pthread
     tiling_api
