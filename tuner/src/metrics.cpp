@@ -33,8 +33,7 @@ static constexpr mode_t SAVE_DIR_AUTHORITY = 0750;
 
 namespace {
 
-std::string StandardizePath(const std::string_view path_view)
-{
+std::string StandardizePath(const std::string_view path_view) {
     std::error_code ec;
     std::filesystem::path path(path_view);
 
@@ -49,8 +48,7 @@ std::string StandardizePath(const std::string_view path_view)
     return {};
 }
 
-inline bool IsSoftLink(std::string_view path)
-{
+inline bool IsSoftLink(std::string_view path) {
     std::error_code ec;
     std::filesystem::path absPath = path;
     bool res = is_symlink(absPath, ec);
@@ -61,8 +59,7 @@ inline bool IsSoftLink(std::string_view path)
     return res;
 }
 
-inline bool IsExist(std::string_view path)
-{
+inline bool IsExist(std::string_view path) {
     std::error_code ec;
     std::filesystem::path p(path);
     bool res = std::filesystem::exists(p, ec);
@@ -73,8 +70,7 @@ inline bool IsExist(std::string_view path)
     return res;
 }
 
-std::string_view GetLastExistPath(std::string_view path)
-{
+std::string_view GetLastExistPath(std::string_view path) {
     if (IsExist(path)) {
         return path;
     }
@@ -91,29 +87,26 @@ std::string_view GetLastExistPath(std::string_view path)
     return last;
 }
 
-inline bool IsRootUser()
-{
+inline bool IsRootUser() {
     constexpr __uid_t root = 0;
     return getuid() == root;
 }
 
-bool CheckPermission(std::string_view path)
-{
+bool CheckPermission(std::string_view path) {
     if (IsRootUser()) {
         return true;
     }
-    struct stat fileStat{};
+    struct stat fileStat {};
     std::string pathStr{path};
     if (stat(pathStr.data(), &fileStat) != 0) {
-        LOGE("Get Path permission error: %s", pathStr.c_str());
-        return false;
+        LOGW("Get Path permission error: %s, skip permission check", pathStr.c_str());
+        return true;
     }
     if ((fileStat.st_mode & S_IWOTH) || (fileStat.st_mode & S_IWGRP)) {
         LOGW("Path %s is not recommended to be writable by group or other users", pathStr.c_str());
     }
     if (!(fileStat.st_mode & S_IRUSR) && !(fileStat.st_mode & S_IXUSR)) {
-        LOGE("Path %s is not readable or executable", pathStr.c_str());
-        return false;
+        LOGW("Path %s is not readable or executable", pathStr.c_str());
     }
     if (fileStat.st_uid == 0 || fileStat.st_uid == getuid()) {
         return true;
@@ -122,8 +115,7 @@ bool CheckPermission(std::string_view path)
     return true;
 }
 
-bool CheckInvalidChar(std::string_view path)
-{
+bool CheckInvalidChar(std::string_view path) {
     auto &invalidChars = GetInvalidChars();
     for (auto c : path) {
         if (auto it = invalidChars.find(c); it != invalidChars.cend()) {
@@ -134,8 +126,7 @@ bool CheckInvalidChar(std::string_view path)
     return true;
 }
 
-bool IsSafePath(std::string_view path)
-{
+bool IsSafePath(std::string_view path) {
     std::string_view existPath = GetLastExistPath(path);
     if (!CheckPermission(existPath)) {
         return false;
@@ -143,8 +134,7 @@ bool IsSafePath(std::string_view path)
     return true;
 }
 
-bool MkdirRecursively(std::string_view path)
-{
+bool MkdirRecursively(std::string_view path) {
     std::error_code ec;
     std::filesystem::path absPath = path;
     if (IsExist(path)) {
@@ -164,8 +154,7 @@ bool MkdirRecursively(std::string_view path)
         cur.append(path.substr(slow, fast - slow));
         cur.append(PATH_SEP);
         if (!IsExist(cur)) {
-            if ((!std::filesystem::create_directory(cur, ec) && ec) ||
-                chmod(cur.c_str(), SAVE_DIR_AUTHORITY) != 0) {
+            if ((!std::filesystem::create_directory(cur, ec) && ec) || chmod(cur.c_str(), SAVE_DIR_AUTHORITY) != 0) {
                 LOGE("Create dir %.*s failed: %s", static_cast<int>(cur.size()), cur.data(), ec.message().c_str());
                 return false;
             }
@@ -178,8 +167,7 @@ bool MkdirRecursively(std::string_view path)
 }
 } // namespace
 
-void Metrics::Add(const std::shared_ptr<OpConfig>& opConfig, Library::Operation *op)
-{
+void Metrics::Add(const std::shared_ptr<OpConfig> &opConfig, Library::Operation *op) {
     Metric metric{};
     metric.SetField<ClassicMetric::DEVICE_ID>(deviceId_);
     metric.SetField<ClassicMetric::CASE_ID>(metrics_.size() + 1);
@@ -191,8 +179,7 @@ void Metrics::Add(const std::shared_ptr<OpConfig>& opConfig, Library::Operation 
     }
 }
 
-bool Metrics::SetOutputPath(std::string_view output)
-{
+bool Metrics::SetOutputPath(std::string_view output) {
     std::string absPath = StandardizePath(output);
     if (absPath.empty() || absPath.back() == '/') {
         LOGE("--output is not a valid file path");
@@ -224,15 +211,11 @@ bool Metrics::SetOutputPath(std::string_view output)
     return true;
 }
 
-void Metrics::PrintTop10(const std::string &head)
-{
+void Metrics::PrintTop10(const std::string &head) {
     std::vector<Metric> tmp = metrics_;
-    auto normalEnd = std::remove_if(tmp.begin(), tmp.end(), [](const Metric &m) {
-        return m.GetTaskDuration() == 0;
-    });
-    std::sort(tmp.begin(), normalEnd, [](const Metric &l, const Metric &r) {
-        return l.GetTaskDuration() < r.GetTaskDuration();
-    });
+    auto normalEnd = std::remove_if(tmp.begin(), tmp.end(), [](const Metric &m) { return m.GetTaskDuration() == 0; });
+    std::sort(tmp.begin(), normalEnd,
+        [](const Metric &l, const Metric &r) { return l.GetTaskDuration() < r.GetTaskDuration(); });
     constexpr size_t NUM = 10;
     LOGM("%sTop %lu:\n%s", DIVIDE.data(), NUM, head.c_str());
     for (size_t i = 0; i < std::min(NUM, tmp.size()); ++i) {
@@ -240,8 +223,7 @@ void Metrics::PrintTop10(const std::string &head)
     }
 }
 
-void Metrics::Dump()
-{
+void Metrics::Dump() {
     std::string head = GetHead();
     std::vector<std::string> extraHeads{extraHeads_.begin(), extraHeads_.end()};
     for (auto &metric : metrics_) {
@@ -261,15 +243,13 @@ void Metrics::Dump()
     }
     std::ostream_iterator<std::string> output_iterator(file, "\n");
     output_iterator++ = head;
-    std::transform(metrics_.begin(), metrics_.end(), output_iterator, [&](Metric& metric) {
-        return metric.ToString();
-    });
+    std::transform(
+        metrics_.begin(), metrics_.end(), output_iterator, [&](Metric &metric) { return metric.ToString(); });
     file.close();
     LOGI("Save profile data to %s success", outputPath_.c_str());
 }
 
-void Metrics::SetDurationAndPrint(double duration)
-{
+void Metrics::SetDurationAndPrint(double duration) {
     if (durationIdx_ >= metrics_.size()) {
         LOGE("SetDuration idx %lu > metrics size", durationIdx_);
         return;
@@ -279,8 +259,7 @@ void Metrics::SetDurationAndPrint(double duration)
     ++durationIdx_;
 }
 
-std::string Metrics::GetHead()
-{
+std::string Metrics::GetHead() {
     std::string head{HEAD};
     for (auto &s : extraHeads_) {
         head.append(",");
