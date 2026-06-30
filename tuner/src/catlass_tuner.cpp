@@ -13,7 +13,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  * ------------------------------------------------------------------------- */
- 
+
 #include "catlass_tuner.h"
 #include "m_t_var.h"
 
@@ -23,12 +23,12 @@ namespace Catlass {
 
 static constexpr int RUN_TIMES = 5;
 
-CatlassTuner::CatlassTuner(CommandLineParser parser) : parser_(std::move(parser))
-{
+CatlassTuner::CatlassTuner(CommandLineParser parser) : parser_(std::move(parser)) {
     if (parser_.HasKey("device")) {
         deviceId_ = -1;
         GET_CHECK(parser_.Get<decltype(deviceId_)>("device", deviceId_), "device");
-        if (deviceId_ == -1) {
+        if (deviceId_ < 0) {
+            LOGE("Device ID must be a non-negative integer, got: %d", deviceId_);
             return;
         }
         metrics_.SetDeviceId(deviceId_);
@@ -55,13 +55,9 @@ CatlassTuner::CatlassTuner(CommandLineParser parser) : parser_(std::move(parser)
     }
 }
 
-CatlassTuner::~CatlassTuner()
-{
-    DeviceMemoryManager::Instance().Finalize();
-}
+CatlassTuner::~CatlassTuner() { DeviceMemoryManager::Instance().Finalize(); }
 
-bool CatlassTuner::InitOperators(OpConfigPool &pool)
-{
+bool CatlassTuner::InitOperators(OpConfigPool &pool) {
     std::string_view kernel;
     if (parser_.HasKey("kernels")) {
         GET_CHECK(parser_.Get<decltype(kernel)>("kernels", kernel), "kernels");
@@ -89,8 +85,7 @@ bool CatlassTuner::InitOperators(OpConfigPool &pool)
     return true;
 }
 
-void CatlassTuner::Run()
-{
+void CatlassTuner::Run() {
     if (!stream_) {
         return;
     }
@@ -130,10 +125,10 @@ void CatlassTuner::Run()
     metrics_.Dump();
 }
 
-OpRunStatus CatlassTuner::RunOp(const std::shared_ptr<OpConfig>& opConfig, Library::Operation *op, uint32_t aicCoreNum)
-{
+OpRunStatus CatlassTuner::RunOp(
+    const std::shared_ptr<OpConfig> &opConfig, Library::Operation *op, uint32_t aicCoreNum) {
     std::vector<KernelType> kernels;
-    std::shared_ptr<void> defer(nullptr, [&](void*) {
+    std::shared_ptr<void> defer(nullptr, [&](void *) {
         // all kernel type ran by current operator
         kernelsQueue_.emplace(kernels);
     });
@@ -174,8 +169,7 @@ OpRunStatus CatlassTuner::RunOp(const std::shared_ptr<OpConfig>& opConfig, Libra
     return stat;
 }
 
-void CatlassTuner::UpdateMetrics(bool readAll)
-{
+void CatlassTuner::UpdateMetrics(bool readAll) {
     auto tmp = profileHandler_.GetDurations();
     durations_.insert(durations_.end(), tmp.begin(), tmp.end());
     if (durations_.empty()) {
@@ -218,8 +212,7 @@ void CatlassTuner::UpdateMetrics(bool readAll)
     durations_.clear();
 }
 
-void CatlassTuner::Synchronize()
-{
+void CatlassTuner::Synchronize() {
     profileHandler_.Synchronize();
     UpdateMetrics(true);
 }
