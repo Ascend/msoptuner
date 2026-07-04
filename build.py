@@ -141,22 +141,50 @@ class BuildManager:
             # -------------------- 单元测试 --------------------
             unit_test_build_dir = self.project_root / "build_ut"
             unit_test_build_dir.mkdir(exist_ok=True)
-            os.chdir(unit_test_build_dir)
+            test_script_dir = self.project_root / "test" / "catlass_test" / "catlass"
+            os.chdir(test_script_dir)
+            self._execute_command(
+                [
+                    "bash",
+                    "scripts/build.sh",
+                    "-DCATLASS_LIBRARY_KERNELS=00_basic_matmul",
+                    '-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++',
+                    "mstuner_catlass",
+                ]
+            )
+            # test_mstuner.py 内部也有 build.sh 调用，需要同样的 libstdc++ ABI 修复。
+            # 但该文件属于 git submodule，不能直接提交修改，故在此用 sed 动态打补丁。
+            subprocess.run(
+                [
+                    "sed",
+                    "-i",
+                    r"s/\('bash', 'scripts\/build\.sh', '--clean', macro_str,\) \('mstuner_catlass'\)/"
+                    r"\1 '-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++', \2/",
+                    str(test_script_dir / "tests" / "test_mstuner.py"),
+                ],
+                check=False,
+            )
+            # 检测 NPU 硬件是否可用：/dev/davinci* 设备存在才运行测试
+            if any(Path("/dev").glob("davinci*")):
+                self._execute_command([sys.executable, "tests/test_mstuner.py"], cwd=str(test_script_dir))
+            else:
+                logging.warning("No NPU device detected, skipping unit tests")
 
-            self._execute_command(["cmake", "..", "-DBUILD_TESTS=ON"])
-            self._execute_command(["make", "-j", str(self.build_jobs)])
-
-            test_script_dir = self.project_root / "test"
-            self._execute_command([sys.executable, "test_mstuner.py"], cwd=str(test_script_dir))
         else:
             # -------------------- 产品构建 --------------------
             product_build_dir = self.project_root / "build"
             product_build_dir.mkdir(exist_ok=True)
-            os.chdir(product_build_dir)
-
-            self._execute_command(["cmake", "..", "-DBUILD_TESTS=ON"])
-            self._execute_command(["make", "-j", str(self.build_jobs)])
-
+            test_script_dir = self.project_root / "test" / "catlass_test" / "catlass"
+            os.chdir(test_script_dir)
+            self._execute_command(
+                [
+                    "bash",
+                    "scripts/build.sh",
+                    "-DCATLASS_LIBRARY_KERNELS=00_basic_matmul",
+                    '-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++',
+                    "mstuner_catlass",
+                ]
+            )
             self._archive_artifacts()
 
 
