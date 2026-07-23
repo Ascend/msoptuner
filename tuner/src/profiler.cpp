@@ -13,7 +13,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  * ------------------------------------------------------------------------- */
- 
+
 #include "profiler.h"
 #include <algorithm>
 #include <runtime/dev.h>
@@ -40,15 +40,15 @@ using ProfStartParaT = struct prof_start_para {
 
 // ts data code
 using StarsSocLogConfigT = struct TagStarsSocLogConfig {
-    uint32_t acsqTask;         // 1-enable,2-disable
-    uint32_t accPmu;           // 1-enable,2-disable
-    uint32_t cdqmReg;          // 1-enable,2-disable
-    uint32_t dvppVpcBlock;     // 1-enable,2-disable
-    uint32_t dvppJpegdBlock;   // 1-enable,2-disable
-    uint32_t dvppJpedeBlock;   // 1-enable,2-disable
-    uint32_t fftsThreadTask;   // 1-enable,2-disable
-    uint32_t fftsBlock;        // 1-enable,2-disable
-    uint32_t sdmaDmu;          // 1-enable,2-disable
+    uint32_t acsqTask; // 1-enable,2-disable
+    uint32_t accPmu; // 1-enable,2-disable
+    uint32_t cdqmReg; // 1-enable,2-disable
+    uint32_t dvppVpcBlock; // 1-enable,2-disable
+    uint32_t dvppJpegdBlock; // 1-enable,2-disable
+    uint32_t dvppJpedeBlock; // 1-enable,2-disable
+    uint32_t fftsThreadTask; // 1-enable,2-disable
+    uint32_t fftsBlock; // 1-enable,2-disable
+    uint32_t sdmaDmu; // 1-enable,2-disable
 };
 
 using ProfPollInfoT = struct prof_poll_info {
@@ -56,7 +56,7 @@ using ProfPollInfoT = struct prof_poll_info {
     uint32_t channelId;
 };
 
-constexpr uint32_t CHANNEL_STARS_SOC_LOG_BUFFER = 50;   /* add for ascend910B */
+constexpr uint32_t CHANNEL_STARS_SOC_LOG_BUFFER = 50; /* add for ascend910B */
 
 enum class TimeType : uint16_t {
     START = 0,
@@ -66,8 +66,7 @@ enum class TimeType : uint16_t {
 
 struct AcsqBean {
 public:
-    explicit AcsqBean(const std::vector<char> &bin)
-    {
+    explicit AcsqBean(const std::vector<char> &bin) {
         constexpr uint16_t typeIndex = 0;
         constexpr uint16_t streamIdIndex = 2;
         constexpr uint16_t streamIdOffset = 11;
@@ -75,11 +74,11 @@ public:
         constexpr uint16_t taskTypeOffset = 10;
         constexpr uint16_t funcTypeAndOperation = 63;
         constexpr uint16_t systemTimeIndex = 0;
-        auto ptr = reinterpret_cast<const AcsqConstruct*>(&bin[0]);
+        auto ptr = reinterpret_cast<const AcsqConstruct *>(&bin[0]);
         acsqData_.taskType = ptr->shortNums1[typeIndex] >> taskTypeOffset;
         acsqData_.funcType = ptr->shortNums1[typeIndex] & funcTypeAndOperation;
         acsqData_.systemTime = ptr->longlongNums[systemTimeIndex];
-    
+
         uint16_t hardwareStreamId = ptr->shortNums1[streamIdIndex];
         uint16_t hardwareTaskId = ptr->shortNums1[taskIdIndex];
         if ((hardwareStreamId & 0x1000) != 0) {
@@ -94,13 +93,9 @@ public:
         }
     }
 
-    uint16_t GetTaskType() const
-    {
-        return acsqData_.taskType;
-    }
+    uint16_t GetTaskType() const { return acsqData_.taskType; }
 
-    TimeType GetTimeType() const
-    {
+    TimeType GetTimeType() const {
         if (acsqData_.funcType == 0) {
             return TimeType::START;
         } else if (acsqData_.funcType == 1) {
@@ -109,20 +104,11 @@ public:
         return TimeType::OTHERS;
     }
 
-    uint16_t GetStreamId() const
-    {
-        return acsqData_.streamId;
-    }
+    uint16_t GetStreamId() const { return acsqData_.streamId; }
 
-    uint16_t GetTaskId() const
-    {
-        return acsqData_.taskId;
-    }
+    uint16_t GetTaskId() const { return acsqData_.taskId; }
 
-    uint64_t GetSystemTime() const
-    {
-        return acsqData_.systemTime;
-    }
+    uint64_t GetSystemTime() const { return acsqData_.systemTime; }
 
 private:
     // format: 4short 1longlong 2short 11int, total 64B
@@ -142,10 +128,11 @@ private:
     } acsqData_{};
 };
 
-bool GetStarsTask(ProfStartParaT &starsProfStartPara)
-{
+bool GetStarsTask(ProfStartParaT &starsProfStartPara) {
     uint32_t starsConfigSize = sizeof(StarsSocLogConfigT);
+    // NOLINTBEGIN(cppcoreguidelines-owning-memory)
     auto *starsConfigPtr = static_cast<StarsSocLogConfigT *>(malloc(starsConfigSize));
+    // NOLINTEND(cppcoreguidelines-owning-memory)
     starsProfStartPara.userData = nullptr;
     if (starsConfigPtr == nullptr) {
         LOGE("Can not get user data pointer while getting stars task");
@@ -172,13 +159,12 @@ int prof_channel_read(unsigned int deviceId, unsigned int channelId, char *outBu
 int prof_stop(unsigned int deviceId, unsigned int channelId);
 int prof_channel_poll(struct prof_poll_info *outBuf, int num, int timeout);
 int halGetDeviceInfo(uint32_t devId, int32_t moduleType, int32_t infoType, int64_t *value);
-int halGetDeviceInfoByBuff(uint32_t deviceId, int32_t aicoreType, int32_t frequeType, void* freq, int32_t* size);
+int halGetDeviceInfoByBuff(uint32_t deviceId, int32_t aicoreType, int32_t frequeType, void *freq, int32_t *size);
 }
 
 namespace Catlass {
 
-bool Profiler::Start()
-{
+bool Profiler::Start() {
     if (running_) {
         Stop();
     }
@@ -190,18 +176,17 @@ bool Profiler::Start()
     }
     int drvRes = prof_drv_start(deviceId_, CHANNEL_STARS_SOC_LOG_BUFFER, &starsProfStartPara);
     if (drvRes != 0) {
-        free(starsProfStartPara.userData);
+        free(starsProfStartPara.userData); // NOLINT(cppcoreguidelines-owning-memory)
         LOGE("Start channel %u failed", CHANNEL_STARS_SOC_LOG_BUFFER);
         return false;
     }
-    free(starsProfStartPara.userData);
+    free(starsProfStartPara.userData); // NOLINT(cppcoreguidelines-owning-memory)
     running_ = true;
     CreateReadThread();
     return true;
 }
 
-void Profiler::Stop()
-{
+void Profiler::Stop() {
     if (!running_) {
         return;
     }
@@ -216,8 +201,7 @@ void Profiler::Stop()
     }
 }
 
-void Profiler::GetDurations(const std::vector<char> &data, std::vector<uint64_t> &starts, std::vector<uint64_t> &ends)
-{
+void Profiler::GetDurations(const std::vector<char> &data, std::vector<uint64_t> &starts, std::vector<uint64_t> &ends) {
     constexpr uint16_t ACSQ_LENGTH = 64;
     for (size_t i = 0; i + ACSQ_LENGTH <= data.size(); i += ACSQ_LENGTH) {
         std::vector<char> splitBinData{&data[i], &data[i] + ACSQ_LENGTH};
@@ -236,8 +220,7 @@ void Profiler::GetDurations(const std::vector<char> &data, std::vector<uint64_t>
     }
 }
 
-void Profiler::CreateReadThread()
-{
+void Profiler::CreateReadThread() {
     readThread_ = std::thread([&]() {
         constexpr int PROF_CHANNEL_NUM = 2;
         static constexpr int PROF_CHANNEL_BUFFER_SIZE = 1024 * 1024 * 2;
@@ -251,8 +234,8 @@ void Profiler::CreateReadThread()
             }
             int ret = prof_channel_poll(channels.data(), PROF_CHANNEL_NUM, 1);
             for (int i = 0; i < ret; ++i) {
-                int curLen = prof_channel_read(channels[i].deviceId, channels[i].channelId,
-                    &outBuf_[0], outBuf_.size());
+                int curLen =
+                    prof_channel_read(channels[i].deviceId, channels[i].channelId, &outBuf_[0], outBuf_.size());
                 data.insert(data.end(), outBuf_.begin(), outBuf_.begin() + curLen);
             }
             if (!data.empty() && callBack_) {
@@ -262,13 +245,9 @@ void Profiler::CreateReadThread()
     });
 }
 
-Profiler::~Profiler()
-{
-    Stop();
-}
+Profiler::~Profiler() { Stop(); }
 
-void ProfileDataHandler::ProfileDataThread()
-{
+void ProfileDataHandler::ProfileDataThread() {
     std::vector<uint64_t> starts;
     std::vector<uint64_t> ends;
     std::vector<char> data;
@@ -301,9 +280,8 @@ void ProfileDataHandler::ProfileDataThread()
     while (!finish_) {
         {
             std::unique_lock<decltype(mtx_)> lock(mtx_);
-            (void)profileDataCV_.wait_for(lock, std::chrono::seconds(1), [this]() {
-                return !profileDataQueue_.empty() || finish_;
-            });
+            (void)profileDataCV_.wait_for(
+                lock, std::chrono::seconds(1), [this]() { return !profileDataQueue_.empty() || finish_; });
             flush();
         }
         getDuration();
@@ -313,8 +291,7 @@ void ProfileDataHandler::ProfileDataThread()
     getDuration();
 }
 
-bool ProfileDataHandler::Init()
-{
+bool ProfileDataHandler::Init() {
     finish_ = false;
     Profiler::CallBackFunc callback = [&](std::vector<char> &&data) {
         {
@@ -332,8 +309,7 @@ bool ProfileDataHandler::Init()
     return true;
 }
 
-void ProfileDataHandler::Synchronize()
-{
+void ProfileDataHandler::Synchronize() {
     if (finish_) {
         return;
     }
@@ -349,8 +325,7 @@ void ProfileDataHandler::Synchronize()
     }
 }
 
-std::pair<int64_t, int32_t> ProfileDataHandler::GetAicoreFreq()
-{
+std::pair<int64_t, int32_t> ProfileDataHandler::GetAicoreFreq() {
     constexpr int32_t MODULE_TYPE_AICORE = 4;
     constexpr int32_t INFO_TYPE_FREQUE = 4;
     constexpr int32_t INFO_TYPE_CURRENT_FREQ = 32;
@@ -366,8 +341,8 @@ std::pair<int64_t, int32_t> ProfileDataHandler::GetAicoreFreq()
     // get current freq
     int32_t curFreq;
     int32_t size = sizeof(int32_t);
-    auto ret = halGetDeviceInfoByBuff(deviceId_, MODULE_TYPE_AICORE, INFO_TYPE_CURRENT_FREQ,
-                                      static_cast<void*>(&curFreq), &size);
+    auto ret = halGetDeviceInfoByBuff(
+        deviceId_, MODULE_TYPE_AICORE, INFO_TYPE_CURRENT_FREQ, static_cast<void *>(&curFreq), &size);
     if (ret != 0) {
         LOGW("Get device current freq failed, ret %d", ret);
         curFreq = 0;
@@ -375,8 +350,7 @@ std::pair<int64_t, int32_t> ProfileDataHandler::GetAicoreFreq()
     return {aicoreFreq, curFreq};
 }
 
-int64_t ProfileDataHandler::GetAicpuFreq()
-{
+int64_t ProfileDataHandler::GetAicpuFreq() {
     if (freq_ != 0) {
         return freq_;
     }
@@ -392,16 +366,15 @@ int64_t ProfileDataHandler::GetAicpuFreq()
     return freq_;
 }
 
-bool ProfileDataHandler::SetDeviceId(int32_t deviceId)
-{
+bool ProfileDataHandler::SetDeviceId(int32_t deviceId) {
     constexpr char const *VIS = "ASCEND_RT_VISIBLE_DEVICES";
     int32_t convertedId = deviceId;
     auto env = getenv(VIS);
     if (env) {
         auto error = rtGetVisibleDeviceIdByLogicDeviceId(deviceId, &convertedId);
         if (error != RT_ERROR_NONE) {
-            LOGE("Call rtGetVisibleDeviceIdByLogicDeviceId failed, error: %d. Please disable %s or try again.",
-                 error, VIS);
+            LOGE("Call rtGetVisibleDeviceIdByLogicDeviceId failed, error: %d. Please disable %s or try again.", error,
+                VIS);
             return false;
         }
     }

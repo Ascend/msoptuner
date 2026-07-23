@@ -13,12 +13,12 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  * ------------------------------------------------------------------------- */
- 
+
 #include "device_memory_manager.h"
 
 namespace Catlass {
 
-void DoClearL2Cache(uint32_t blockDim, uint8_t* l2ctrl, uint8_t* stream, uint8_t* buffer, uint8_t* tilingSize);
+void DoClearL2Cache(uint32_t blockDim, uint8_t *l2ctrl, uint8_t *stream, uint8_t *buffer, uint8_t *tilingSize);
 
 namespace {
 struct L2CacheClearTiling {
@@ -26,8 +26,7 @@ struct L2CacheClearTiling {
     uint32_t aicCoreNum;
 };
 
-bool GetTiling(L2CacheClearTiling &tiling)
-{
+bool GetTiling(L2CacheClearTiling &tiling) {
     const static std::unordered_map<std::string_view, L2CacheClearTiling> TILING_MAP = {
         {"Ascend910B1", {8388608, 24}},
         {"Ascend910B2", {8388608, 24}},
@@ -51,8 +50,7 @@ bool GetTiling(L2CacheClearTiling &tiling)
 }
 }
 
-bool DeviceMemoryManager::MallocWorkspace(DeviceMemoryParam &param)
-{
+bool DeviceMemoryManager::MallocWorkspace(DeviceMemoryParam &param) {
     if (!Expand(&workspace_, workspaceSize_, param.size)) {
         LOGE("Expand device memory for workspace failed");
         return false;
@@ -61,22 +59,20 @@ bool DeviceMemoryManager::MallocWorkspace(DeviceMemoryParam &param)
     return true;
 }
 
-bool DeviceMemoryManager::MallocArguments(std::vector<DeviceMemoryParam> &params)
-{
+bool DeviceMemoryManager::MallocArguments(std::vector<DeviceMemoryParam> &params) {
     std::vector<uint64_t> sizes(params.size());
     uint64_t sum = 0;
     bool overflow = false;
     constexpr uint64_t MAX_MEMORY_SIZE = 100UL * 1024 * 1024 * 1024;
-    std::transform(params.begin(), params.end(), sizes.begin(),
-        [&](const DeviceMemoryParam& p) {
-            uint64_t size = Align(p.size);
-            if (MAX_MEMORY_SIZE - sum < size) {
-                overflow = true;
-                sum = 0;
-            }
-            sum += size;
-            return size;
-        });
+    std::transform(params.begin(), params.end(), sizes.begin(), [&](const DeviceMemoryParam &p) {
+        uint64_t size = Align(p.size);
+        if (MAX_MEMORY_SIZE - sum < size) {
+            overflow = true;
+            sum = 0;
+        }
+        sum += size;
+        return size;
+    });
     if (overflow) {
         LOGE("Kernel arguments size larger than 100GB, cannot malloc device memory");
         return false;
@@ -87,14 +83,13 @@ bool DeviceMemoryManager::MallocArguments(std::vector<DeviceMemoryParam> &params
     }
     auto addr = reinterpret_cast<uintptr_t>(arg_);
     for (std::size_t i = 0; i < params.size(); ++i) {
-        *params[i].addr = sizes[i] > 0 ? reinterpret_cast<void*>(addr) : nullptr;
+        *params[i].addr = sizes[i] > 0 ? reinterpret_cast<void *>(addr) : nullptr;
         addr += sizes[i];
     }
     return true;
 }
 
-aclrtStream DeviceMemoryManager::Initialize(int32_t deviceId)
-{
+aclrtStream DeviceMemoryManager::Initialize(int32_t deviceId) {
     if (stream_) {
         return stream_;
     }
@@ -119,8 +114,7 @@ aclrtStream DeviceMemoryManager::Initialize(int32_t deviceId)
     return stream_;
 }
 
-void DeviceMemoryManager::Finalize()
-{
+void DeviceMemoryManager::Finalize() {
     if (!stream_) {
         return;
     }
@@ -135,8 +129,7 @@ void DeviceMemoryManager::Finalize()
     stream_ = nullptr;
 }
 
-bool DeviceMemoryManager::Expand(void **addr, uint64_t &size, uint64_t target)
-{
+bool DeviceMemoryManager::Expand(void **addr, uint64_t &size, uint64_t target) {
     target = Align(target);
     if (*addr && size >= target) {
         return true;
@@ -155,27 +148,25 @@ bool DeviceMemoryManager::Expand(void **addr, uint64_t &size, uint64_t target)
     return true;
 }
 
-bool DeviceMemoryManager::Free(void *addr)
-{
+bool DeviceMemoryManager::Free(void *addr) {
     if (addr) {
         auto err = aclrtFree(addr);
         if (err != ACL_SUCCESS) {
-            LOGE("Call aclrtFree failed, %d, release memory for 0x%lx failed", err, (uint64_t)addr);
+            LOGE("Call aclrtFree failed, %d, release memory for 0x%lx failed", err, reinterpret_cast<uint64_t>(addr));
             return false;
         }
     }
     return true;
 }
 
-bool DeviceMemoryManager::InitCacheClear()
-{
+bool DeviceMemoryManager::InitCacheClear() {
     L2CacheClearTiling tiling{};
     if (!GetTiling(tiling)) {
         return false;
     }
     cacheClear_.cacheSize = tiling.clearSizePerCore * tiling.aicCoreNum;
     int err = aclrtMalloc(&cacheClear_.buffer, cacheClear_.cacheSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    std::shared_ptr<void> defer(nullptr, [&](void*) {
+    std::shared_ptr<void> defer(nullptr, [&](void *) {
         if (err != ACL_SUCCESS) {
             Free(cacheClear_.buffer);
             Free(cacheClear_.tilingSize);
@@ -215,8 +206,7 @@ bool DeviceMemoryManager::InitCacheClear()
     return true;
 }
 
-aclError DeviceMemoryManager::SetCacheClearTiling(uint64_t clearSizePerCore)
-{
+aclError DeviceMemoryManager::SetCacheClearTiling(uint64_t clearSizePerCore) {
     constexpr size_t TILING_SIZE = 32;
     auto err = aclrtMalloc(&cacheClear_.tilingSize, TILING_SIZE, ACL_MEM_MALLOC_HUGE_FIRST);
     if (err != ACL_SUCCESS) {
@@ -230,13 +220,11 @@ aclError DeviceMemoryManager::SetCacheClearTiling(uint64_t clearSizePerCore)
         LOGE("Call aclrtMallocHost failed, err: %d, size %lu", err, TILING_SIZE);
         return err;
     }
-    std::shared_ptr<void> deferC(nullptr, [&host_tilingSize](void*) {
-        aclrtFreeHost(host_tilingSize);
-    });
+    std::shared_ptr<void> deferC(nullptr, [&host_tilingSize](void *) { aclrtFreeHost(host_tilingSize); });
 
-    *reinterpret_cast<uint64_t*>(host_tilingSize) = clearSizePerCore;
+    *reinterpret_cast<uint64_t *>(host_tilingSize) = clearSizePerCore;
     err = aclrtMemcpyAsync(cacheClear_.tilingSize, sizeof(uint64_t), host_tilingSize, sizeof(uint64_t),
-                           ACL_MEMCPY_HOST_TO_DEVICE, stream_);
+        ACL_MEMCPY_HOST_TO_DEVICE, stream_);
     if (err != ACL_SUCCESS || (err = aclrtSynchronizeStream(stream_)) != ACL_SUCCESS) {
         LOGE("Set cache clear data failed, err: %d", err);
         return err;
@@ -245,16 +233,14 @@ aclError DeviceMemoryManager::SetCacheClearTiling(uint64_t clearSizePerCore)
 }
 
 // return true if calls ClearL2Cache
-bool DeviceMemoryManager::ClearL2Cache(uint32_t blockDim)
-{
+bool DeviceMemoryManager::ClearL2Cache(uint32_t blockDim) {
     bool res = false;
     if (cacheClear_.buffer && cacheClear_.tilingSize && cacheClear_.flushBuffer) {
-        DoClearL2Cache(blockDim, nullptr, reinterpret_cast<uint8_t*>(stream_),
-                       reinterpret_cast<uint8_t*>(cacheClear_.buffer),
-                       reinterpret_cast<uint8_t*>(cacheClear_.tilingSize));
-        ACL_CHECK(aclrtMemcpyAsync(cacheClear_.flushBuffer, cacheClear_.cacheSize,
-                                   cacheClear_.buffer, cacheClear_.cacheSize, ACL_MEMCPY_DEVICE_TO_DEVICE, stream_),
-                  "aclrtMemcpyAsync");
+        DoClearL2Cache(blockDim, nullptr, reinterpret_cast<uint8_t *>(stream_),
+            reinterpret_cast<uint8_t *>(cacheClear_.buffer), reinterpret_cast<uint8_t *>(cacheClear_.tilingSize));
+        ACL_CHECK(aclrtMemcpyAsync(cacheClear_.flushBuffer, cacheClear_.cacheSize, cacheClear_.buffer,
+                      cacheClear_.cacheSize, ACL_MEMCPY_DEVICE_TO_DEVICE, stream_),
+            "aclrtMemcpyAsync");
         ACL_CHECK(aclrtSynchronizeStream(stream_), "aclrtSynchronizeStream");
         res = true;
     }
@@ -269,8 +255,7 @@ bool DeviceMemoryManager::ClearL2Cache(uint32_t blockDim)
     return res;
 }
 
-bool DeviceMemoryManager::FillDeviceData(void *dst, size_t size, void *host) const
-{
+bool DeviceMemoryManager::FillDeviceData(void *dst, size_t size, void *host) const {
     auto d = reinterpret_cast<uint64_t>(dst);
     auto addr = reinterpret_cast<uint64_t>(arg_);
     auto addr2 = reinterpret_cast<uint64_t>(workspace_);
