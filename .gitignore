@@ -1,8 +1,13 @@
-__pycache__
-.vscode/
+#ide
+#devcontainer适配
+#.vscode/
 .idea/
+#build
+__pycache__
 build/
 output/
 cmake-build-debug/
-
+artifacts
+#others
 .codemate
+.host-gitconfig

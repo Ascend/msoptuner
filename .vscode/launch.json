@@ -1,0 +1,196 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GDB: Launch Main Program",
+      "type": "cppdbg",
+      "request": "launch",
+      "preLaunchTask": "Build: Debug Mode",
+      "program": "${workspaceFolder}/output/bin/mstuner_catlass",
+      "args": [
+          "--m=${input:m}",
+          "--n=${input:n}",
+          "--k=${input:k}",
+          "--device=${input:device}",
+          "--output=${input:output}"
+      ],
+      "stopAtEntry": true,
+      "cwd": "${workspaceFolder}/output/bin",
+      "environment": [
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "${workspaceFolder}/output/lib64:${env:LD_LIBRARY_PATH}"
+        },
+        {
+          "name": "LD_PRELOAD_PATH",
+          "value": "${workspaceFolder}/output/lib64"
+        }
+      ],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "为 gdb 启用整齐打印",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "设置反汇编风格为 Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        },
+        {
+          "description": "跟踪父进程 (fork 后)",
+          "text": "-gdb-set follow-fork-mode parent",
+          "ignoreFailures": true
+        },
+        {
+          "description": "fork 后分离子进程",
+          "text": "-gdb-set detach-on-fork on",
+          "ignoreFailures": true
+        },
+        {
+          "description": "允许挂起断点",
+          "text": "set breakpoint pending on",
+          "ignoreFailures": true
+        }
+      ],
+      "logging": {
+        "moduleLoad": false,
+        "trace": false,
+        "engineLogging": false,
+        "programOutput": true,
+        "exceptions": true
+      }
+    },
+    {
+      "name": "GDB: Launch Main Program (Child Process Tracking)",
+      "type": "cppdbg",
+      "request": "launch",
+      "preLaunchTask": "Build: Debug Mode",
+      "program": "${workspaceFolder}/output/bin/mstuner_catlass",
+      "args": [
+          "--m=${input:m}",
+          "--n=${input:n}",
+          "--k=${input:k}",
+          "--device=${input:device}",
+          "--output=${input:output}"
+      ],
+      "stopAtEntry": true,
+      "cwd": "${workspaceFolder}/output/bin",
+      "environment": [
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "${workspaceFolder}/output/lib64:${env:LD_LIBRARY_PATH}"
+        },
+        {
+          "name": "LD_PRELOAD_PATH",
+          "value": "${workspaceFolder}/output/lib64"
+        }
+      ],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "为 gdb 启用整齐打印",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "设置反汇编风格为 Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        },
+        {
+          "description": "跟踪子进程 (fork 后自动切换到子进程)",
+          "text": "-gdb-set follow-fork-mode child",
+          "ignoreFailures": true
+        },
+        {
+          "description": "fork 后分离父进程",
+          "text": "-gdb-set detach-on-fork on",
+          "ignoreFailures": true
+        },
+        {
+          "description": "允许挂起断点",
+          "text": "set breakpoint pending on",
+          "ignoreFailures": true
+        },
+        {
+          "description": "在共享库加载事件时暂停",
+          "text": "set stop-on-solib-events 1",
+          "ignoreFailures": true
+        }
+      ],
+      "logging": {
+        "moduleLoad": false,
+        "trace": false,
+        "engineLogging": false,
+        "programOutput": true,
+        "exceptions": true
+      }
+    },
+    {
+      "name": "GDB: Attach to Running Process",
+      "type": "cppdbg",
+      "request": "attach",
+      "program": "${workspaceFolder}/output/bin/mstuner_catlass",
+      "processId": "${command:pickProcess}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "为 gdb 启用整齐打印",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "设置反汇编风格为 Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
+      ],
+      "logging": {
+        "moduleLoad": false,
+        "trace": false,
+        "engineLogging": false,
+        "programOutput": true,
+        "exceptions": true
+      }
+    }
+  ],
+  "inputs": [
+    {
+        "id": "m",
+        "type": "promptString",
+        "description": "请输入矩阵参数m",
+        "default": "memcheck"
+    },
+    {
+        "id": "n",
+        "type": "promptString",
+        "description": "请输入矩阵参数n",
+        "default": "memcheck"
+    },
+    {
+        "id": "k",
+        "type": "promptString",
+        "description": "请输入矩阵参数k",
+        "default": "memcheck"
+    },
+    {
+        "id": "device",
+        "type": "promptString",
+        "description": "请输入设备编号",
+        "default": "0"
+    },
+    {
+        "id": "output",
+        "type": "promptString",
+        "description": "请输入结果输出路径",
+        "default": "./result.csv"
+    }
+  ]
+}

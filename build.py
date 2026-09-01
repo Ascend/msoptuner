@@ -116,7 +116,11 @@ class BuildManager:
 
     def run(self):
         os.chdir(self.project_root)
-
+        extra_options = {}
+        for option in self.parsed_arguments.extra:
+            key, _, value = option.partition('=')
+            extra_options[key] = value
+            logging.info("--extra: %s = %s", key, value)
         # 将 --whl-version 传入环境变量，供 setup.py 通过 os.environ.get('WHL_VERSION') 读取
         whl_version = self.parsed_arguments.whl_version
         if whl_version:
@@ -136,7 +140,9 @@ class BuildManager:
             from download_dependencies import DependencyManager
 
             DependencyManager(self.parsed_arguments).run()
-
+        if extra_options.get('only_down_deps') == 'true':
+            logging.info("only_down_deps=true, exiting after dependency download.")
+            return
         if 'test' in self.parsed_arguments.command:
             # -------------------- 单元测试 --------------------
             unit_test_build_dir = self.project_root / "build_ut"
@@ -148,7 +154,8 @@ class BuildManager:
                     "bash",
                     "scripts/build.sh",
                     "-DCATLASS_LIBRARY_KERNELS=00_basic_matmul",
-                    '-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++',
+                    "-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++",
+                    "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
                     "mstuner_catlass",
                 ]
             )
@@ -181,7 +188,8 @@ class BuildManager:
                     "bash",
                     "scripts/build.sh",
                     "-DCATLASS_LIBRARY_KERNELS=00_basic_matmul",
-                    '-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++',
+                    "-DCMAKE_CXX_STANDARD_LIBRARIES=-lstdc++",
+                    "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
                     "mstuner_catlass",
                 ]
             )
