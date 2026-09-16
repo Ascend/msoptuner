@@ -8,6 +8,8 @@
 
 </div>
 
+English | [简体中文](README.md)
+
 ## ✨ What's New
 
 * [December 30, 2025]: MindStudio Ops Tuner project is now online for the first time. 
