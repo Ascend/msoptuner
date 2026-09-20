@@ -16,7 +16,7 @@ git config --global credential.helper store
 
 ### 环境准备
 
-Atlas A2 系列产品硬件环境
+Atlas A2系列产品硬件环境
 
   开始构建之前，需要确保已安装bisheng编译器，并且其可执行文件所在路径在环境变量$PATH中（如果已安装cann算子工具包，可在工具包安装路径下执行source set_env.sh）。
 
@@ -31,7 +31,7 @@ Atlas A2 系列产品硬件环境
 - 克隆本仓库
 
     ```sh
-    git clone https://gitcode.com/Ascend/msoptuner.git
+    git clone https://gitcode.com/Ascend/msoptuner.git -b 26.2.0
     ```
 
 - 一键式脚本方式
