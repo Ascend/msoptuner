@@ -36,8 +36,6 @@ MindStudio Ops Tuner（算子Tiling寻优，msOpTuner）是一款用于 CATLASS 
 
 ## 🙏 致谢
 
-msOpTuner由华为公司的下列部门联合贡献：
+本工具由华为技术有限公司与开发者联合贡献。
 
-- 计算产品线
-
-  感谢来自社区的每一个PR，欢迎贡献msOpTuner。
+感谢来自社区的每一个PR，欢迎贡献。
